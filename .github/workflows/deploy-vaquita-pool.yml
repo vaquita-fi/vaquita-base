@@ -1,0 +1,108 @@
+name: Deploy VaquitaPool
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+          - mainnet
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set environment variables
+        id: env
+        run: |
+          # Set environment based on trigger type
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # For push events, default to testnet
+            ENVIRONMENT="testnet"
+          else
+            # For manual dispatch, use the input
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          fi
+          
+          if [ "$ENVIRONMENT" = "mainnet" ]; then
+            echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=PRODUCTION_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=8453" >> $GITHUB_OUTPUT
+            echo "SCRIPT_FILE=DeployVaquitaPoolBase.s.sol" >> $GITHUB_OUTPUT
+            echo "CONTRACT_NAME=DeployVaquitaPoolBaseScript" >> $GITHUB_OUTPUT
+          else
+            echo "RPC_URL=https://sepolia.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=TESTNET_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=84532" >> $GITHUB_OUTPUT
+            echo "SCRIPT_FILE=DeployVaquitaPoolBaseSepolia.s.sol" >> $GITHUB_OUTPUT
+            echo "CONTRACT_NAME=DeployVaquitaPoolBaseSepoliaScript" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+      - name: Build contracts
+        run: |
+          cd contracts
+          forge build
+
+      - name: Deploy to testnet (Base Sepolia)
+        if: steps.env.outputs.ENVIRONMENT == 'testnet'
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          cd contracts
+          echo "🚀 Deploying VaquitaPool to Base Sepolia testnet..."
+          forge script script/${{ steps.env.outputs.SCRIPT_FILE }}:${{ steps.env.outputs.CONTRACT_NAME }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --broadcast \
+            --verify \
+            --etherscan-api-key ${{ secrets.ETHERSCAN_API_KEY }} \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Deploy to mainnet (Base)
+        if: steps.env.outputs.ENVIRONMENT == 'mainnet'
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          cd contracts
+          echo "🚀 Deploying VaquitaPool to Base mainnet..."
+          forge script script/${{ steps.env.outputs.SCRIPT_FILE }}:${{ steps.env.outputs.CONTRACT_NAME }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --broadcast \
+            --verify \
+            --etherscan-api-key ${{ secrets.ETHERSCAN_API_KEY }} \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Display deployment details
+        run: |
+          echo "✅ VaquitaPool deployment completed successfully!"
+          echo "Environment: ${{ steps.env.outputs.ENVIRONMENT }}"
+          echo "Network: ${{ steps.env.outputs.RPC_URL }}"
+          echo "Chain ID: ${{ steps.env.outputs.CHAIN_ID }}"
+          echo "Script: ${{ steps.env.outputs.SCRIPT_FILE }}"
+          echo ""
+          echo "📋 Deployment Summary:"
+          echo "- Implementation contract deployed"
+          echo "- Proxy contract deployed and initialized"
+          echo "- Contract verified on Etherscan"
+          echo ""
+          echo "🔍 Check the transaction details in the logs above for contract addresses."

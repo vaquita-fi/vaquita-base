@@ -1,0 +1,120 @@
+name: Add ERC20 Rewards
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+          - mainnet
+      contract_address:
+        description: 'Contract address to send transaction to'
+        required: true
+        type: string
+      token_address:
+        description: 'ERC20 token contract address'
+        required: true
+        type: string
+      lockPeriod:
+        description: 'Lock period parameter (in seconds)'
+        required: true
+        type: string
+        default: '604800'
+      amount:
+        description: 'Amount parameter (in token units)'
+        required: true
+        type: string
+        default: '10000000'
+
+jobs:
+  add-erc20-rewards:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set environment variables
+        id: env
+        run: |
+          # Set environment based on trigger type
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # For push events, default to testnet
+            ENVIRONMENT="testnet"
+          else
+            # For manual dispatch, use the input
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          fi
+          
+          if [ "$ENVIRONMENT" = "mainnet" ]; then
+            echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=PRODUCTION_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=8453" >> $GITHUB_OUTPUT
+          else
+            echo "RPC_URL=https://sepolia.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=TESTNET_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=84532" >> $GITHUB_OUTPUT
+          fi
+          
+          # Set default values for push events
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "CONTRACT_ADDRESS=${{ secrets.DEFAULT_CONTRACT_ADDRESS }}" >> $GITHUB_OUTPUT
+            echo "TOKEN_ADDRESS=${{ secrets.DEFAULT_TOKEN_ADDRESS }}" >> $GITHUB_OUTPUT
+            echo "LOCK_PERIOD=604800" >> $GITHUB_OUTPUT
+            echo "AMOUNT=10000000" >> $GITHUB_OUTPUT
+          else
+            echo "CONTRACT_ADDRESS=${{ github.event.inputs.contract_address }}" >> $GITHUB_OUTPUT
+            echo "TOKEN_ADDRESS=${{ github.event.inputs.token_address }}" >> $GITHUB_OUTPUT
+            echo "LOCK_PERIOD=${{ github.event.inputs.lockPeriod }}" >> $GITHUB_OUTPUT
+            echo "AMOUNT=${{ github.event.inputs.amount }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Approve ERC20 token
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          echo "Approving ERC20 token: ${{ steps.env.outputs.TOKEN_ADDRESS }}"
+          cast send ${{ steps.env.outputs.TOKEN_ADDRESS }} \
+            "approve(address,uint256)" \
+            ${{ steps.env.outputs.CONTRACT_ADDRESS }} \
+            ${{ steps.env.outputs.AMOUNT }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Add ERC20 rewards
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          echo "Adding ERC20 rewards..."
+          cast send ${{ steps.env.outputs.CONTRACT_ADDRESS }} \
+            "addRewards(uint256,address,uint256)" \
+            ${{ steps.env.outputs.LOCK_PERIOD }} \
+            ${{ steps.env.outputs.TOKEN_ADDRESS }} \
+            ${{ steps.env.outputs.AMOUNT }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Display transaction details
+        run: |
+          echo "✅ ERC20 Rewards added successfully!"
+          echo "Environment: ${{ steps.env.outputs.ENVIRONMENT || 'testnet' }}"
+          echo "Contract: ${{ steps.env.outputs.CONTRACT_ADDRESS }}"
+          echo "Token Address: ${{ steps.env.outputs.TOKEN_ADDRESS }}"
+          echo "Function: addRewards(uint256,address,uint256)"
+          echo "Lock Period: ${{ steps.env.outputs.LOCK_PERIOD }} seconds"
+          echo "Amount: ${{ steps.env.outputs.AMOUNT }}"
