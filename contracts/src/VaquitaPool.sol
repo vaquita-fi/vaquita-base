@@ -9,7 +9,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IAccessManagedMSV} from "./interfaces/external/IAccessManagedMSV.sol";
 import {IPermit} from "./interfaces/IPermit.sol";
-import {IWETH} from "./interfaces/IWETH.sol";
+import {IWeth} from "./interfaces/IWeth.sol";
 
 /**
  * @title VaquitaPool
@@ -51,7 +51,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     
     // State variables
     mapping(address => Asset) public assets; // asset address => Asset struct
-    IWETH public weth; // WETH contract for ETH wrapping/unwrapping
+    IWeth public weth; // WETH contract for ETH wrapping/unwrapping
     
     uint256 public constant BASIS_POINTS = 1e4;
     uint256 public performanceFee; // Fee for performance (initially 0)
@@ -113,7 +113,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         __ReentrancyGuard_init();
         if (_weth == address(0)) revert InvalidAddress();
         if (_feeReceiver == address(0)) revert InvalidAddress();
-        weth = IWETH(_weth);
+        weth = IWeth(_weth);
         feeReceiver = _feeReceiver;
         
         uint256 length = _assets.length;

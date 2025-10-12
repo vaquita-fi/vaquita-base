@@ -12,13 +12,13 @@ import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManage
 import {IAccessManagedMSV} from "../src/interfaces/external/IAccessManagedMSV.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {IPool} from "../src/interfaces/external/IPool.sol";
-import {IWETH} from "../src/interfaces/IWETH.sol";
+import {IWeth} from "../src/interfaces/IWeth.sol";
 
 contract VaquitaPoolUsdcTest is TestUtils {
     VaquitaPool public vaquita;
     IERC20 public usdc;
     IERC20 public usdt;
-    IWETH public weth;
+    IWeth public weth;
     IAccessManagedMSV public usdcAccessManagedMSV;
     IAccessManagedMSV public usdtAccessManagedMSV;
     IAccessManagedMSV public wethAccessManagedMSV;
@@ -65,7 +65,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
 
         usdc = IERC20(USDC_TOKEN_ADDRESS);
         usdt = IERC20(USDT_TOKEN_ADDRESS);
-        weth = IWETH(WETH_TOKEN_ADDRESS);
+        weth = IWeth(WETH_TOKEN_ADDRESS);
         usdcWhale = address(USDC_WHALE_ADDRESS);
         usdtWhale = address(USDT_WHALE_ADDRESS);
         deployer = address(DEPLOYER_ADDRESS);

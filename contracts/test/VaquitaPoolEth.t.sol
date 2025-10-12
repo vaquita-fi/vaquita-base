@@ -12,11 +12,11 @@ import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManage
 import {IAccessManagedMSV} from "../src/interfaces/external/IAccessManagedMSV.sol";
 import {TestUtils} from "./TestUtils.sol";
 import {IPool} from "../src/interfaces/external/IPool.sol";
-import {IWETH} from "../src/interfaces/IWETH.sol";
+import {IWeth} from "../src/interfaces/IWeth.sol";
 
 contract VaquitaPoolEthTest is TestUtils {
     VaquitaPool public vaquita;
-    IWETH public weth;
+    IWeth public weth;
     IAccessManagedMSV public wethAccessManagedMSV;
     AccessManager public wethAccessManager;
     IPool public wethPool;
@@ -46,7 +46,7 @@ contract VaquitaPoolEthTest is TestUtils {
         uint256 baseSepoliaForkBlock = 32_214_235;
         vm.createSelectFork(vm.rpcUrl("base-sepolia"), baseSepoliaForkBlock);
 
-        weth = IWETH(WETH_TOKEN_ADDRESS);
+        weth = IWeth(WETH_TOKEN_ADDRESS);
         wethPool = IPool(WETH_AAVE_POOL_ADDRESS);
         wethWhale = address(WETH_WHALE_ADDRESS);
         deployer = address(DEPLOYER_ADDRESS);
