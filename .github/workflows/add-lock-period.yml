@@ -1,0 +1,81 @@
+name: Add Lock Period
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+          - mainnet
+      contract_address:
+        description: 'Contract address to send transaction to'
+        required: true
+        type: string
+      asset_address:
+        description: 'Asset address (address(0) for ETH)'
+        required: true
+        type: string
+      lock_period:
+        description: 'Lock period in seconds'
+        required: true
+        type: string
+        default: '604800'
+
+jobs:
+  add-lock-period:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set environment variables
+        id: env
+        run: |
+          # For manual dispatch, use the input
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          
+          if [ "$ENVIRONMENT" = "mainnet" ]; then
+            echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=PRODUCTION_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=8453" >> $GITHUB_OUTPUT
+          else
+            echo "RPC_URL=https://sepolia.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=TESTNET_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=84532" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "CONTRACT_ADDRESS=${{ github.event.inputs.contract_address }}" >> $GITHUB_OUTPUT
+          echo "ASSET_ADDRESS=${{ github.event.inputs.asset_address }}" >> $GITHUB_OUTPUT
+          echo "LOCK_PERIOD=${{ github.event.inputs.lock_period }}" >> $GITHUB_OUTPUT
+
+      - name: Add lock period
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          echo "Adding lock period..."
+          cast send ${{ steps.env.outputs.CONTRACT_ADDRESS }} \
+            "addLockPeriod(uint256,address)" \
+            ${{ steps.env.outputs.LOCK_PERIOD }} \
+            ${{ steps.env.outputs.ASSET_ADDRESS }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Display transaction details
+        run: |
+          echo "✅ Lock period added successfully!"
+          echo "Environment: ${{ steps.env.outputs.ENVIRONMENT }}"
+          echo "Contract: ${{ steps.env.outputs.CONTRACT_ADDRESS }}"
+          echo "Asset Address: ${{ steps.env.outputs.ASSET_ADDRESS }}"
+          echo "Function: addLockPeriod(uint256,address)"
+          echo "Lock Period: ${{ steps.env.outputs.LOCK_PERIOD }} seconds"
