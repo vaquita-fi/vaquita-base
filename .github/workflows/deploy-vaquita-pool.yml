@@ -1,10 +1,6 @@
 name: Deploy VaquitaPool
 
 on:
-  push:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
     inputs:
       environment:
@@ -32,14 +28,8 @@ jobs:
       - name: Set environment variables
         id: env
         run: |
-          # Set environment based on trigger type
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # For push events, default to testnet
-            ENVIRONMENT="testnet"
-          else
-            # For manual dispatch, use the input
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-          fi
+          # For manual dispatch, use the input
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
           
           if [ "$ENVIRONMENT" = "mainnet" ]; then
             echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT

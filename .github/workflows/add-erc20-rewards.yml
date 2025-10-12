@@ -1,10 +1,6 @@
 name: Add ERC20 Rewards
 
 on:
-  push:
-    branches:
-      - main
-      - develop
   workflow_dispatch:
     inputs:
       environment:
@@ -50,14 +46,8 @@ jobs:
       - name: Set environment variables
         id: env
         run: |
-          # Set environment based on trigger type
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # For push events, default to testnet
-            ENVIRONMENT="testnet"
-          else
-            # For manual dispatch, use the input
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
-          fi
+          # For manual dispatch, use the input
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
           
           if [ "$ENVIRONMENT" = "mainnet" ]; then
             echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT
@@ -69,18 +59,10 @@ jobs:
             echo "CHAIN_ID=84532" >> $GITHUB_OUTPUT
           fi
           
-          # Set default values for push events
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "CONTRACT_ADDRESS=${{ secrets.DEFAULT_CONTRACT_ADDRESS }}" >> $GITHUB_OUTPUT
-            echo "TOKEN_ADDRESS=${{ secrets.DEFAULT_TOKEN_ADDRESS }}" >> $GITHUB_OUTPUT
-            echo "LOCK_PERIOD=604800" >> $GITHUB_OUTPUT
-            echo "AMOUNT=10000000" >> $GITHUB_OUTPUT
-          else
-            echo "CONTRACT_ADDRESS=${{ github.event.inputs.contract_address }}" >> $GITHUB_OUTPUT
-            echo "TOKEN_ADDRESS=${{ github.event.inputs.token_address }}" >> $GITHUB_OUTPUT
-            echo "LOCK_PERIOD=${{ github.event.inputs.lockPeriod }}" >> $GITHUB_OUTPUT
-            echo "AMOUNT=${{ github.event.inputs.amount }}" >> $GITHUB_OUTPUT
-          fi
+          echo "CONTRACT_ADDRESS=${{ github.event.inputs.contract_address }}" >> $GITHUB_OUTPUT
+          echo "TOKEN_ADDRESS=${{ github.event.inputs.token_address }}" >> $GITHUB_OUTPUT
+          echo "LOCK_PERIOD=${{ github.event.inputs.lockPeriod }}" >> $GITHUB_OUTPUT
+          echo "AMOUNT=${{ github.event.inputs.amount }}" >> $GITHUB_OUTPUT
 
       - name: Approve ERC20 token
         env:
