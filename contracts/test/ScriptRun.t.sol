@@ -12,8 +12,8 @@ import {TestUtils} from "./TestUtils.sol";
 contract ScriptRunTest is TestUtils {
 
     function setUp() public {
-        // Fork mainnet
-        uint256 baseSepoliaForkBlock = 30_259_177;
+        // Fork base sepolia
+        uint256 baseSepoliaForkBlock = 32_108_899;
         vm.createSelectFork(vm.rpcUrl("base-sepolia"), baseSepoliaForkBlock);
     }
 

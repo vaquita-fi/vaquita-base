@@ -10,44 +10,57 @@ import {TestUtils} from "./TestUtils.sol";
 
 contract ProxyDeploymentAndUpgradeTest is TestUtils {
     address constant USDC_TOKEN = 0x036CbD53842c5426634e7929541eC2318f3dCF7e; // Base Sepolia USDC
-    address constant AAVE_POOL = 0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b; // Base Sepolia Aave V3 Pool
-    address constant ACCESS_MANAGED_MSV_ADDRESS = 0x37db614aD7659750686a25933cB329CA3D90BD3f; // AccessManagedMSV address
+    address constant WETH_TOKEN = 0x4200000000000000000000000000000000000006; // Base Sepolia WETH
+    address constant USDC_ACCESS_MANAGED_MSV_ADDRESS = 0x040AF24f0Ca02cF0ce03ef2f9bcfB32724b2d84F; // AccessManagedMSV address
+    // address constant ACCESS_MANAGED_MSV_ADDRESS = 0x37db614aD7659750686a25933cB329CA3D90BD3f; // AccessManagedMSV address
     uint256 lockPeriod = 1 days;
 
     function setUp() public {
-        uint256 baseSepoliaForkBlock = 30_259_177;
+        // Fork base sepolia
+        uint256 baseSepoliaForkBlock = 32_214_235;
         vm.createSelectFork(vm.rpcUrl("base-sepolia"), baseSepoliaForkBlock);
     }
 
     function test_VaquitaPoolProxyDeploymentAndUpgrade() public {
         VaquitaPool implementation = new VaquitaPool();
+        address[] memory assets = new address[](1);
+        assets[0] = address(USDC_TOKEN);
+        address[] memory msvAddresses = new address[](1);
+        msvAddresses[0] = address(USDC_ACCESS_MANAGED_MSV_ADDRESS);
         uint256[] memory lockPeriodsArr = new uint256[](1);
         lockPeriodsArr[0] = lockPeriod;
+        address owner = makeAddr("owner");
         bytes memory initData = abi.encodeWithSelector(
             implementation.initialize.selector,
-            USDC_TOKEN,
-            ACCESS_MANAGED_MSV_ADDRESS,
-            lockPeriodsArr
+            assets,
+            msvAddresses,
+            lockPeriodsArr,
+            address(WETH_TOKEN),
+            owner            
         );
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(implementation),
-            address(this),
+            owner,
             initData
         );
-        VaquitaPool proxied = VaquitaPool(address(proxy));
-        assertEq(proxied.isSupportedLockPeriod(lockPeriod), true, "Lock period should be set");
+        vm.stopPrank();
+        VaquitaPool proxied = VaquitaPool(payable(address(proxy)));
+        assertEq(proxied.isSupportedLockPeriod(lockPeriod, address(USDC_TOKEN)), true, "Lock period should be set");
 
         address proxyAdminAddress = _getProxyAdmin(address(proxy));
         ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddress);
         VaquitaPool newImpl = new VaquitaPool();
+        vm.startPrank(owner);
         proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(address(proxy)),
             address(newImpl),
             ""
         );
-        assertEq(proxyAdmin.owner(), address(this), "ProxyAdmin owner should be test contract");
-        assertEq(proxied.isSupportedLockPeriod(lockPeriod), true, "Lock period should still be set after upgrade");
-        assertEq(address(proxied.token()), USDC_TOKEN, "token should be set");
-        assertEq(address(proxied.accessManagedMSV()), ACCESS_MANAGED_MSV_ADDRESS, "accessManagedMSV should be set");
+        vm.stopPrank();
+        assertEq(proxyAdmin.owner(), owner, "ProxyAdmin owner should be test contract");
+        assertEq(proxied.isSupportedLockPeriod(lockPeriod, address(USDC_TOKEN)), true, "Lock period should still be set after upgrade");
+        (,address msvAddress, VaquitaPool.AssetStatus status) = proxied.assets(address(USDC_TOKEN));
+        assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Active), "token should be set");
+        assertEq(msvAddress, USDC_ACCESS_MANAGED_MSV_ADDRESS, "accessManagedMSV should be set");
     }
 }
