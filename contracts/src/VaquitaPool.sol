@@ -66,8 +66,8 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     mapping(bytes32 => Position) public positions;
 
     // Events
-    event FundsDeposited(bytes32 indexed depositId, address indexed owner, address indexed asset, uint256 amount, uint256 shares, uint256 lockPeriod);
-    event FundsWithdrawn(bytes32 indexed depositId, address indexed owner, address indexed asset, uint256 transferAmount, uint256 interest, uint256 reward);
+    event FundsDeposited(bytes32 indexed depositId, address indexed owner, address indexed asset, uint256 lockPeriod, uint256 amount, uint256 shares);
+    event FundsWithdrawn(bytes32 indexed depositId, address indexed owner, address indexed asset, uint256 lockPeriod, uint256 transferAmount, uint256 interest, uint256 reward);
     event LockPeriodAdded(address asset, uint256 newLockPeriod);
     event PerformanceFeeUpdated(uint256 newFee);
     event RewardsAdded(address asset, uint256 period, uint256 rewardAmount);
@@ -242,7 +242,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         periods[period][asset].totalShares += sharesToMint;
         periods[period][asset].totalDeposits += amount;
 
-        emit FundsDeposited(depositId, msg.sender, asset, amount, sharesToMint, period);
+        emit FundsDeposited(depositId, msg.sender, asset, period, amount, sharesToMint);
     }
 
     /**
@@ -324,7 +324,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
             IERC20(asset).safeTransfer(msg.sender, amountToTransfer);
         }
 
-        emit FundsWithdrawn(depositId, msg.sender, asset, amountToTransfer, interest, reward);
+        emit FundsWithdrawn(depositId, msg.sender, asset, period, amountToTransfer, interest, reward);
     }
 
     /**
