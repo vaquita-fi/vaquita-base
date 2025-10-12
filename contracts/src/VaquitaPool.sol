@@ -40,6 +40,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         address assetAddress; // address(0) for ETH, token address for ERC20
         address msvAddress;   // MSV contract address for this asset
         AssetStatus status;   // Current status of the asset
+        uint256 protocolFees; // Protocol fees collected for this asset
     }
 
     // Period struct to track rewards and shares for a single asset
@@ -55,7 +56,6 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     
     uint256 public constant BASIS_POINTS = 1e4;
     uint256 public performanceFee; // Fee for performance (initially 0)
-    uint256 public protocolFees;  // protocol fees
     address public feeReceiver;   // Address to receive protocol fees
 
     mapping(uint256 => mapping(address => Period)) public periods; // lockPeriod => asset => Period
@@ -71,8 +71,8 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
     event LockPeriodAdded(address asset, uint256 newLockPeriod);
     event PerformanceFeeUpdated(uint256 newFee);
     event RewardsAdded(address asset, uint256 period, uint256 rewardAmount);
-    event ProtocolFeesAdded(uint256 protocolFees);
-    event ProtocolFeesWithdrawn(uint256 protocolFees);
+    event ProtocolFeesAdded(address asset, uint256 protocolFees);
+    event ProtocolFeesWithdrawn(address asset, uint256 protocolFees);
     event AssetAdded(address asset);
     event AssetStatusChanged(address asset, AssetStatus oldStatus, AssetStatus newStatus);
     event FeeReceiverUpdated(address oldFeeReceiver, address newFeeReceiver);
@@ -126,7 +126,8 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
                 assets[_assets[i]] = Asset({
                     assetAddress: _assets[i],
                     msvAddress: _msvAddresses[i],
-                    status: AssetStatus.Active
+                    status: AssetStatus.Active,
+                    protocolFees: 0
                 });
                 if (_assets[i] == address(0)) {
                     weth.approve(_msvAddresses[i], type(uint256).max);
@@ -296,8 +297,8 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         uint256 interest = withdrawnAmount > position.amount ? withdrawnAmount - position.amount : 0;
         uint256 feeAmount = (interest * performanceFee) / BASIS_POINTS;
         uint256 remainingInterest = interest - feeAmount;
-        protocolFees += feeAmount;        // Fees go to protocol fees
-        emit ProtocolFeesAdded(feeAmount);
+        assets[asset].protocolFees += feeAmount;        // Fees go to protocol fees per asset
+        emit ProtocolFeesAdded(asset, feeAmount);
         
         if (block.timestamp < position.finalizationTime) {
             // Early withdrawal - calculate fee and add remaining interest to reward pool
@@ -346,12 +347,12 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
      * @param asset The asset to withdraw fees from (address(0) for ETH)
      */
     function withdrawProtocolFees(address asset) external onlyOwner {
-        Asset memory assetInfo = assets[asset];
+        Asset storage assetInfo = assets[asset];
         if (assetInfo.msvAddress == address(0) || assetInfo.status == AssetStatus.Inactive) revert AssetNotSupported();
         if (feeReceiver == address(0)) revert InvalidAddress();
         
-        uint256 cacheProtocolFees = protocolFees;
-        protocolFees = 0;
+        uint256 cacheProtocolFees = assetInfo.protocolFees;
+        assetInfo.protocolFees = 0;
         
         if (asset == address(0)) {
             // ETH withdrawal
@@ -363,7 +364,7 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
             IERC20(asset).safeTransfer(feeReceiver, cacheProtocolFees);
         }
         
-        emit ProtocolFeesWithdrawn(cacheProtocolFees);
+        emit ProtocolFeesWithdrawn(asset, cacheProtocolFees);
     }
 
     /**
@@ -439,7 +440,8 @@ contract VaquitaPool is Initializable, OwnableUpgradeable, PausableUpgradeable, 
         assets[asset] = Asset({
             assetAddress: asset,
             msvAddress: msvAddress,
-            status: AssetStatus.Active
+            status: AssetStatus.Active,
+            protocolFees: 0
         });
 
         emit AssetAdded(asset);
