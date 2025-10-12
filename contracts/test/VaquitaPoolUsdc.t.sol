@@ -335,7 +335,8 @@ contract VaquitaPoolUsdcTest is TestUtils {
         console.log("performanceFee", performanceFee);
         assertEq(totalDeposits, 0, "Total deposits should be 0");
         assertEq(rewardPool, interest - performanceFee, "Reward pool should be interest");
-        assertEq(vaquita.protocolFees(), performanceFee, "Protocol fees should be performance fee");
+        (,,,uint256 usdcProtocolFees) = vaquita.assets(address(usdc));
+        assertEq(usdcProtocolFees, performanceFee, "Protocol fees should be performance fee");
         assertEq(aliceWithdrawal, initialAmount, "Alice should withdraw all her funds");
         assertEq(aliceBalanceBefore, aliceBalanceAfter, "Alice should not have lost any balance");
     }
@@ -382,7 +383,8 @@ contract VaquitaPoolUsdcTest is TestUtils {
         console.log("performanceFee", performanceFee);
         assertEq(totalDeposits, 0, "Total deposits should be 0");
         assertEq(rewardPool, 0, "Reward pool should be interest");
-        assertEq(vaquita.protocolFees(), performanceFee, "Protocol fees should be performance fee");
+        (,,,uint256 usdcProtocolFees) = vaquita.assets(address(usdc));
+        assertEq(usdcProtocolFees, performanceFee, "Protocol fees should be performance fee");
         assertEq(aliceWithdrawal, initialAmount + interest - performanceFee, "Alice should withdraw all her funds");
     }
 
@@ -566,7 +568,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
         console.log("entries.length", entries.length);
         for (uint256 i = 0; i < entries.length; i++) {
             if (entries[i].topics.length > 0 && entries[i].topics[0] == keccak256("FundsDeposited(bytes32,address,address,uint256,uint256,uint256)")) {
-                (uint256 amount,, ) = abi.decode(entries[i].data, (uint256, uint256, uint256));
+                (,uint256 amount, ) = abi.decode(entries[i].data, (uint256, uint256, uint256));
                 totalDeposits += amount;
             }
         }
@@ -681,7 +683,8 @@ contract VaquitaPoolUsdcTest is TestUtils {
         withdraw(alice, aliceDepositId);
 
         // Protocol fees should be greater than 0
-        assertGt(vaquita.protocolFees(), 0, "Protocol fees should be greater than 0 after early withdrawal");
+        (,,,uint256 usdcProtocolFees) = vaquita.assets(address(usdc));
+        assertGt(usdcProtocolFees, 0, "Protocol fees should be greater than 0 after early withdrawal");
 
         // Only owner can withdraw protocol fees
         vm.prank(alice);
@@ -691,7 +694,8 @@ contract VaquitaPoolUsdcTest is TestUtils {
         // Owner withdraws protocol fees
         vm.prank(owner);
         vaquita.withdrawProtocolFees(address(usdc));
-        assertEq(vaquita.protocolFees(), 0, "Protocol fees should be zero after withdrawal");
+        (,,,usdcProtocolFees) = vaquita.assets(address(usdc));
+        assertEq(usdcProtocolFees, 0, "Protocol fees should be zero after withdrawal");
     }
 
     function test_UpdateLockPeriod() public {
@@ -716,7 +720,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
         vaquita.updateAsset(address(usdc), newMsvAddress, VaquitaPool.AssetStatus.Frozen);
         
         // Verify the asset was updated
-        (address assetAddress, address msvAddress, VaquitaPool.AssetStatus status) = vaquita.assets(address(usdc));
+        (address assetAddress, address msvAddress, VaquitaPool.AssetStatus status,) = vaquita.assets(address(usdc));
         assertEq(assetAddress, address(usdc), "Asset address should remain the same");
         assertEq(msvAddress, newMsvAddress, "MSV address should be updated");
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Frozen), "Status should be updated to Frozen");
@@ -755,21 +759,21 @@ contract VaquitaPoolUsdcTest is TestUtils {
         vm.prank(owner);
         vaquita.updateAsset(address(usdc), newMsvAddress, VaquitaPool.AssetStatus.Frozen);
         
-        (, , VaquitaPool.AssetStatus status) = vaquita.assets(address(usdc));
+        (, , VaquitaPool.AssetStatus status,) = vaquita.assets(address(usdc));
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Frozen), "Status should be Frozen");
         
         // Test Frozen -> Active
         vm.prank(owner);
         vaquita.updateAsset(address(usdc), newMsvAddress, VaquitaPool.AssetStatus.Active);
         
-        (, , status) = vaquita.assets(address(usdc));
+        (, , status,) = vaquita.assets(address(usdc));
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Active), "Status should be Active");
         
         // Test Active -> Inactive
         vm.prank(owner);
         vaquita.updateAsset(address(usdc), newMsvAddress, VaquitaPool.AssetStatus.Inactive);
         
-        (, , status) = vaquita.assets(address(usdc));
+        (, , status,) = vaquita.assets(address(usdc));
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Inactive), "Status should be Inactive");
     }
 
@@ -778,7 +782,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
         VaquitaPool.AssetStatus currentStatus = VaquitaPool.AssetStatus.Active;
         
         // Get current values
-        (, address msvAddress, VaquitaPool.AssetStatus status) = vaquita.assets(address(usdc));
+        (, address msvAddress, VaquitaPool.AssetStatus status,) = vaquita.assets(address(usdc));
         assertEq(msvAddress, currentMsvAddress, "Initial MSV should be set");
         assertEq(uint256(status), uint256(currentStatus), "Initial status should be Active");
         
@@ -787,7 +791,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
         vaquita.updateAsset(address(usdc), currentMsvAddress, currentStatus);
         
         // Verify values remain the same
-        (, msvAddress, status) = vaquita.assets(address(usdc));
+        (, msvAddress, status,) = vaquita.assets(address(usdc));
         assertEq(msvAddress, currentMsvAddress, "MSV should remain the same");
         assertEq(uint256(status), uint256(currentStatus), "Status should remain the same");
     }
@@ -839,7 +843,7 @@ contract VaquitaPoolUsdcTest is TestUtils {
         vaquita.updateAsset(address(0), newMsvAddress, VaquitaPool.AssetStatus.Frozen);
         
         // Verify the ETH asset was updated
-        (address assetAddress, address msvAddress, VaquitaPool.AssetStatus status) = vaquita.assets(address(0));
+        (address assetAddress, address msvAddress, VaquitaPool.AssetStatus status,) = vaquita.assets(address(0));
         assertEq(assetAddress, address(0), "Asset address should be address(0) for ETH");
         assertEq(msvAddress, newMsvAddress, "MSV address should be updated");
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Frozen), "Status should be updated to Frozen");

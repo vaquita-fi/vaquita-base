@@ -59,7 +59,7 @@ contract ProxyDeploymentAndUpgradeTest is TestUtils {
         vm.stopPrank();
         assertEq(proxyAdmin.owner(), owner, "ProxyAdmin owner should be test contract");
         assertEq(proxied.isSupportedLockPeriod(lockPeriod, address(USDC_TOKEN)), true, "Lock period should still be set after upgrade");
-        (,address msvAddress, VaquitaPool.AssetStatus status) = proxied.assets(address(USDC_TOKEN));
+        (,address msvAddress, VaquitaPool.AssetStatus status,) = proxied.assets(address(USDC_TOKEN));
         assertEq(uint256(status), uint256(VaquitaPool.AssetStatus.Active), "token should be set");
         assertEq(msvAddress, USDC_ACCESS_MANAGED_MSV_ADDRESS, "accessManagedMSV should be set");
     }
