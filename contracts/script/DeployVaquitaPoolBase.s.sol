@@ -9,9 +9,9 @@ contract DeployVaquitaPoolBaseScript is Script {
     function run() public returns (address) {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        address usdcAccessManagedMSV = address(0x040AF24f0Ca02cF0ce03ef2f9bcfB32724b2d84F); // AccessManagedMSV address for USDC
-        address cbBTCAccessManagedMSV = address(0x4f069a9630f6b6ec5541B7B9C07929a26D808048); // AccessManagedMSV address for cbBTC
-        address wethAccessManagedMSV = address(0x19B4a4A5766a07c533b7E50b2A387b7c9CF91088); // AccessManagedMSV address for WETH
+        address usdcAccessManagedMSV = address(0xBb14950D8E8977CC2B1a59c6B5288E534265237c); // AccessManagedMSV address for USDC
+        address cbBTCAccessManagedMSV = address(0x90953E988963b30c8EdA4aea64A45B8303E7478e); // AccessManagedMSV address for cbBTC
+        address wethAccessManagedMSV = address(0x4584a0b9a6a0f49015599af0644c8c5dc05AAB55); // AccessManagedMSV address for WETH
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy implementation
