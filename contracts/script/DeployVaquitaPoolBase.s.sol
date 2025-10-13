@@ -42,12 +42,12 @@ contract DeployVaquitaPoolBaseScript is Script {
         msvAddresses[5] = wethAccessManagedMSV;
         
         uint256[] memory lockPeriods = new uint256[](6);
-        lockPeriods[0] = 1 minutes;
-        lockPeriods[1] = 1 weeks;
-        lockPeriods[2] = 1 minutes;
-        lockPeriods[3] = 1 weeks;
-        lockPeriods[4] = 1 minutes;
-        lockPeriods[5] = 1 weeks;
+        lockPeriods[0] = 1 weeks;
+        lockPeriods[1] = 90 days;
+        lockPeriods[2] = 1 weeks;
+        lockPeriods[3] = 90 days;
+        lockPeriods[4] = 1 weeks;
+        lockPeriods[5] = 90 days;
 
         bytes memory initData = abi.encodeWithSelector(
             implementation.initialize.selector,
