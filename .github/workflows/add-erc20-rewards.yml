@@ -29,6 +29,15 @@ on:
         required: true
         type: string
         default: '10000000'
+      skip_approve:
+        description: 'Skip ERC20 approve step'
+        required: false
+        type: boolean
+        default: false
+      gas_limit:
+        description: 'Custom gas limit (e.g., 400000)'
+        required: false
+        type: string
 
 jobs:
   add-erc20-rewards:
@@ -63,25 +72,46 @@ jobs:
           echo "TOKEN_ADDRESS=${{ github.event.inputs.token_address }}" >> $GITHUB_OUTPUT
           echo "LOCK_PERIOD=${{ github.event.inputs.lockPeriod }}" >> $GITHUB_OUTPUT
           echo "AMOUNT=${{ github.event.inputs.amount }}" >> $GITHUB_OUTPUT
+          echo "SKIP_APPROVE=${{ github.event.inputs.skip_approve }}" >> $GITHUB_OUTPUT
+          echo "GAS_LIMIT=${{ github.event.inputs.gas_limit }}" >> $GITHUB_OUTPUT
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
       - name: Approve ERC20 token
+        if: ${{ steps.env.outputs.SKIP_APPROVE != 'true' }}
         env:
           PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
         run: |
           echo "Approving ERC20 token: ${{ steps.env.outputs.TOKEN_ADDRESS }}"
+          if [ -n "${{ steps.env.outputs.GAS_LIMIT }}" ]; then
+            GAS_ARGS="--gas-limit ${{ steps.env.outputs.GAS_LIMIT }}"
+          else
+            GAS_ARGS=""
+          fi
           cast send ${{ steps.env.outputs.TOKEN_ADDRESS }} \
             "approve(address,uint256)" \
             ${{ steps.env.outputs.CONTRACT_ADDRESS }} \
             ${{ steps.env.outputs.AMOUNT }} \
             --rpc-url ${{ steps.env.outputs.RPC_URL }} \
             --private-key $PRIVATE_KEY \
-            --chain ${{ steps.env.outputs.CHAIN_ID }}
+            --chain ${{ steps.env.outputs.CHAIN_ID }} \
+            $GAS_ARGS
+
+      - name: Wait 10 seconds
+        if: ${{ steps.env.outputs.SKIP_APPROVE != 'true' }}
+        run: |
+          echo "Waiting 10 seconds before addRewards call..."
+          sleep 10
 
       - name: Add ERC20 rewards
         env:
           PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
         run: |
           echo "Adding ERC20 rewards..."
+          if [ -n "${{ steps.env.outputs.GAS_LIMIT }}" ]; then
+            GAS_ARGS="--gas-limit ${{ steps.env.outputs.GAS_LIMIT }}"
+          else
+            GAS_ARGS=""
+          fi
           cast send ${{ steps.env.outputs.CONTRACT_ADDRESS }} \
             "addRewards(uint256,address,uint256)" \
             ${{ steps.env.outputs.LOCK_PERIOD }} \
@@ -89,7 +119,8 @@ jobs:
             ${{ steps.env.outputs.AMOUNT }} \
             --rpc-url ${{ steps.env.outputs.RPC_URL }} \
             --private-key $PRIVATE_KEY \
-            --chain ${{ steps.env.outputs.CHAIN_ID }}
+            --chain ${{ steps.env.outputs.CHAIN_ID }} \
+            $GAS_ARGS
 
       - name: Display transaction details
         run: |
