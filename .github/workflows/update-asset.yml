@@ -1,0 +1,145 @@
+name: Update Asset
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to update asset on'
+        required: true
+        default: 'testnet'
+        type: choice
+        options:
+          - testnet
+          - mainnet
+      pool_address:
+        description: 'VaquitaPool contract address'
+        required: true
+        type: string
+      asset_address:
+        description: 'Asset address (use 0x0000000000000000000000000000000000000000 for ETH)'
+        required: true
+        type: string
+      msv_address:
+        description: 'New MSV contract address'
+        required: true
+        type: string
+      asset_status:
+        description: 'Asset status: 0=Inactive, 1=Active, 2=Frozen'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '0'
+          - '1'
+          - '2'
+
+jobs:
+  update-asset:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Set environment variables
+        id: env
+        run: |
+          # For manual dispatch, use the input
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          
+          if [ "$ENVIRONMENT" = "mainnet" ]; then
+            echo "RPC_URL=https://mainnet.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=PRODUCTION_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=8453" >> $GITHUB_OUTPUT
+          else
+            echo "RPC_URL=https://sepolia.base.org" >> $GITHUB_OUTPUT
+            echo "PRIVATE_KEY_SECRET=TESTNET_PRIVATE_KEY" >> $GITHUB_OUTPUT
+            echo "CHAIN_ID=84532" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+      - name: Validate inputs
+        run: |
+          POOL_ADDRESS="${{ github.event.inputs.pool_address }}"
+          ASSET_ADDRESS="${{ github.event.inputs.asset_address }}"
+          MSV_ADDRESS="${{ github.event.inputs.msv_address }}"
+          
+          if [ -z "$POOL_ADDRESS" ] || [ "$POOL_ADDRESS" = "0x" ]; then
+            echo "❌ Error: Pool address is required"
+            exit 1
+          fi
+          
+          if [ -z "$ASSET_ADDRESS" ] || [ "$ASSET_ADDRESS" = "0x" ]; then
+            echo "❌ Error: Asset address is required"
+            exit 1
+          fi
+          
+          if [ -z "$MSV_ADDRESS" ] || [ "$MSV_ADDRESS" = "0x" ]; then
+            echo "❌ Error: MSV address is required"
+            exit 1
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "Pool Address: $POOL_ADDRESS"
+          echo "Asset Address: $ASSET_ADDRESS"
+          echo "MSV Address: $MSV_ADDRESS"
+          echo "Asset Status: ${{ github.event.inputs.asset_status }}"
+
+      - name: Update asset on testnet (Base Sepolia)
+        if: steps.env.outputs.ENVIRONMENT == 'testnet'
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          echo "🔄 Updating asset on Base Sepolia testnet..."
+          cast send \
+            ${{ github.event.inputs.pool_address }} \
+            "updateAsset(address,address,uint8)" \
+            ${{ github.event.inputs.asset_address }} \
+            ${{ github.event.inputs.msv_address }} \
+            ${{ github.event.inputs.asset_status }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Update asset on mainnet (Base)
+        if: steps.env.outputs.ENVIRONMENT == 'mainnet'
+        env:
+          PRIVATE_KEY: ${{ secrets[steps.env.outputs.PRIVATE_KEY_SECRET] }}
+        run: |
+          echo "🔄 Updating asset on Base mainnet..."
+          cast send \
+            ${{ github.event.inputs.pool_address }} \
+            "updateAsset(address,address,uint8)" \
+            ${{ github.event.inputs.asset_address }} \
+            ${{ github.event.inputs.msv_address }} \
+            ${{ github.event.inputs.asset_status }} \
+            --rpc-url ${{ steps.env.outputs.RPC_URL }} \
+            --private-key $PRIVATE_KEY \
+            --chain ${{ steps.env.outputs.CHAIN_ID }}
+
+      - name: Display update details
+        run: |
+          echo "✅ Asset update completed successfully!"
+          echo "Environment: ${{ steps.env.outputs.ENVIRONMENT }}"
+          echo "Network: ${{ steps.env.outputs.RPC_URL }}"
+          echo "Chain ID: ${{ steps.env.outputs.CHAIN_ID }}"
+          echo "Pool Address: ${{ github.event.inputs.pool_address }}"
+          echo "Asset Address: ${{ github.event.inputs.asset_address }}"
+          echo "MSV Address: ${{ github.event.inputs.msv_address }}"
+          echo "Asset Status: ${{ github.event.inputs.asset_status }}"
+          echo ""
+          echo "📋 Update Summary:"
+          echo "- Asset status and/or MSV address updated"
+          echo "- Token approvals updated if MSV address changed"
+          echo ""
+          echo "🔍 Check the transaction details in the logs above for confirmation."
+
+
+
+
