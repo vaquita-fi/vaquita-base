@@ -31,15 +31,10 @@ contract VaquitaPoolCbBtcTest is TestUtils {
 
     // Base Sepolia addresses
     address constant CB_BTC_TOKEN_ADDRESS = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf; // cbBTC Base Sepolia
-    // address constant CB_BTC_AAVE_POOL_ADDRESS = 0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b; // Aave pool address for cbBTC
-    // address constant CB_BTC_WHALE_ADDRESS = 0xFaEc9cDC3Ef75713b48f46057B98BA04885e3391; // cbBTC rich address
-    // address constant CB_BTC_ACCESS_MANAGER_ADDRESS = 0x39833372eaF093285abc571860B6317051Ad58fd; // AccessManager address
-    // address constant CB_BTC_ACCESS_MANAGED_MSV_ADDRESS = 0xEaC8740c493cD8Cb22E22e79b1a7Bb055Bc9Ef4e; // AccessManagedMSV address
-    // address constant DEPLOYER_ADDRESS = 0x76410823009D09b1FD8e607Fd40baA0323b3bC95; // Deployer address
 
     function setUp() public {
         // Fork base sepolia
-        uint256 baseForkBlock = 37_787_176;
+        uint256 baseForkBlock = 38_068_910;
         vm.createSelectFork(vm.rpcUrl("base"), baseForkBlock);
 
         vaquita = VaquitaPool(payable(0x2400B4E44878d25597da16659705F48927cadef1));
