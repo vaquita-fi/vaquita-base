@@ -11,6 +11,22 @@ on:
         options:
           - testnet
           - mainnet
+      usdc_msv_address:
+        description: 'USDC Access Managed MSV contract address'
+        required: true
+        type: string
+      weth_msv_address:
+        description: 'WETH Access Managed MSV contract address'
+        required: true
+        type: string
+      usdt_msv_address:
+        description: 'USDT Access Managed MSV contract address (testnet only)'
+        required: false
+        type: string
+      cbbtc_msv_address:
+        description: 'cbBTC Access Managed MSV contract address (mainnet only)'
+        required: false
+        type: string
 
 jobs:
   deploy:
@@ -47,6 +63,47 @@ jobs:
           
           echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
 
+      - name: Validate inputs
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          USDC_MSV="${{ github.event.inputs.usdc_msv_address }}"
+          WETH_MSV="${{ github.event.inputs.weth_msv_address }}"
+          
+          if [ -z "$USDC_MSV" ] || [ "$USDC_MSV" = "0x" ]; then
+            echo "❌ Error: USDC MSV address is required"
+            exit 1
+          fi
+          
+          if [ -z "$WETH_MSV" ] || [ "$WETH_MSV" = "0x" ]; then
+            echo "❌ Error: WETH MSV address is required"
+            exit 1
+          fi
+          
+          if [ "$ENVIRONMENT" = "testnet" ]; then
+            USDT_MSV="${{ github.event.inputs.usdt_msv_address }}"
+            if [ -z "$USDT_MSV" ] || [ "$USDT_MSV" = "0x" ]; then
+              echo "❌ Error: USDT MSV address is required for testnet"
+              exit 1
+            fi
+          fi
+          
+          if [ "$ENVIRONMENT" = "mainnet" ]; then
+            CBBTC_MSV="${{ github.event.inputs.cbbtc_msv_address }}"
+            if [ -z "$CBBTC_MSV" ] || [ "$CBBTC_MSV" = "0x" ]; then
+              echo "❌ Error: cbBTC MSV address is required for mainnet"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Input validation passed"
+          echo "USDC MSV Address: $USDC_MSV"
+          echo "WETH MSV Address: $WETH_MSV"
+          if [ "$ENVIRONMENT" = "testnet" ]; then
+            echo "USDT MSV Address: $USDT_MSV"
+          else
+            echo "cbBTC MSV Address: $CBBTC_MSV"
+          fi
+
       - name: Build contracts
         run: |
           cd contracts
@@ -60,6 +117,10 @@ jobs:
           cd contracts
           echo "🚀 Deploying VaquitaPool to Base Sepolia testnet..."
           forge script script/${{ steps.env.outputs.SCRIPT_FILE }}:${{ steps.env.outputs.CONTRACT_NAME }} \
+            --sig "run(address,address,address)" \
+            ${{ github.event.inputs.usdc_msv_address }} \
+            ${{ github.event.inputs.weth_msv_address }} \
+            ${{ github.event.inputs.usdt_msv_address }} \
             --rpc-url ${{ steps.env.outputs.RPC_URL }} \
             --private-key $PRIVATE_KEY \
             --broadcast \
@@ -75,6 +136,10 @@ jobs:
           cd contracts
           echo "🚀 Deploying VaquitaPool to Base mainnet..."
           forge script script/${{ steps.env.outputs.SCRIPT_FILE }}:${{ steps.env.outputs.CONTRACT_NAME }} \
+            --sig "run(address,address,address)" \
+            ${{ github.event.inputs.usdc_msv_address }} \
+            ${{ github.event.inputs.weth_msv_address }} \
+            ${{ github.event.inputs.cbbtc_msv_address }} \
             --rpc-url ${{ steps.env.outputs.RPC_URL }} \
             --private-key $PRIVATE_KEY \
             --broadcast \
@@ -89,6 +154,15 @@ jobs:
           echo "Network: ${{ steps.env.outputs.RPC_URL }}"
           echo "Chain ID: ${{ steps.env.outputs.CHAIN_ID }}"
           echo "Script: ${{ steps.env.outputs.SCRIPT_FILE }}"
+          echo ""
+          echo "📋 MSV Addresses Used:"
+          echo "- USDC MSV: ${{ github.event.inputs.usdc_msv_address }}"
+          echo "- WETH MSV: ${{ github.event.inputs.weth_msv_address }}"
+          if [ "${{ steps.env.outputs.ENVIRONMENT }}" = "testnet" ]; then
+            echo "- USDT MSV: ${{ github.event.inputs.usdt_msv_address }}"
+          else
+            echo "- cbBTC MSV: ${{ github.event.inputs.cbbtc_msv_address }}"
+          fi
           echo ""
           echo "📋 Deployment Summary:"
           echo "- Implementation contract deployed"
