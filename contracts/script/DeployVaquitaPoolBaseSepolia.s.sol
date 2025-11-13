@@ -6,12 +6,13 @@ import {VaquitaPool} from "../src/VaquitaPool.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract DeployVaquitaPoolBaseSepoliaScript is Script {
-    function run() public returns (address) {
+    function run(address usdcAccessManagedMSV, address wethAccessManagedMSV, address usdtAccessManagedMSV) public returns (address) {
+        require(usdcAccessManagedMSV != address(0), "USDC Access Managed MSV address is required");
+        require(wethAccessManagedMSV != address(0), "WETH Access Managed MSV address is required");
+        require(usdtAccessManagedMSV != address(0), "USDT Access Managed MSV address is required");
+
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
-        address usdcAccessManagedMSV = address(0xEaC8740c493cD8Cb22E22e79b1a7Bb055Bc9Ef4e); // AccessManagedMSV address for USDC
-        address usdtAccessManagedMSV = address(0x0C3423B77334F8703f8A5DDe8F2E1C01d08C39D6); // AccessManagedMSV address for USDT
-        address wethAccessManagedMSV = address(0x19B4a4A5766a07c533b7E50b2A387b7c9CF91088); // AccessManagedMSV address for WETH
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy implementation
