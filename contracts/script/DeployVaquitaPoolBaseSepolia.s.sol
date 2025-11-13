@@ -7,10 +7,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 contract DeployVaquitaPoolBaseSepoliaScript is Script {
     function run(address usdcAccessManagedMSV, address wethAccessManagedMSV, address usdtAccessManagedMSV) public returns (address) {
-        require(usdcAccessManagedMSV != address(0), "USDC Access Managed MSV address is required");
-        require(wethAccessManagedMSV != address(0), "WETH Access Managed MSV address is required");
-        require(usdtAccessManagedMSV != address(0), "USDT Access Managed MSV address is required");
-
+        
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.addr(deployerPrivateKey);
         vm.startBroadcast(deployerPrivateKey);

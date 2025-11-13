@@ -19,7 +19,7 @@ contract ScriptRunTest is TestUtils {
 
     function test_VaquitaPoolProxyScriptRun() public {
         DeployVaquitaPoolBaseSepoliaScript deployVaquitaPoolBaseScript = new DeployVaquitaPoolBaseSepoliaScript();
-        address vaquitaPool = deployVaquitaPoolBaseScript.run();
+        address vaquitaPool = deployVaquitaPoolBaseScript.run(0xEaC8740c493cD8Cb22E22e79b1a7Bb055Bc9Ef4e, 0x19B4a4A5766a07c533b7E50b2A387b7c9CF91088, 0x0C3423B77334F8703f8A5DDe8F2E1C01d08C39D6);
         assertNotEq(vaquitaPool, address(0), "Vaquita pool should be deployed");
     }
 
@@ -31,7 +31,7 @@ contract ScriptRunTest is TestUtils {
 
     function test_UpgradeVaquitaPoolScriptRun() public {
         DeployVaquitaPoolBaseSepoliaScript deployVaquitaPoolBaseScript = new DeployVaquitaPoolBaseSepoliaScript();
-        address vaquitaPool = deployVaquitaPoolBaseScript.run();
+        address vaquitaPool = deployVaquitaPoolBaseScript.run(0xEaC8740c493cD8Cb22E22e79b1a7Bb055Bc9Ef4e, 0x19B4a4A5766a07c533b7E50b2A387b7c9CF91088, 0x0C3423B77334F8703f8A5DDe8F2E1C01d08C39D6);
         assertNotEq(vaquitaPool, address(0), "Vaquita pool should be deployed");
 
         VaquitaPoolScript vaquitaPoolScript = new VaquitaPoolScript();
